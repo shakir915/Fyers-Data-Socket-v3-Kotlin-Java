@@ -91,7 +91,7 @@ object FyersSocketHelperV3 {
 
     suspend fun startFyersocket() {
 
-        val symbolToFyersSymbol = FyersMaster.symbolToFyersSymbolV3()
+        val symbolToFyersSymbol: java.util.HashMap<String, String> = FyersMaster.symbolToFyersSymbolV3()
         /*****  CAPITAL MARKET SYMBOLS MASTER CSV FILE : https://public.fyers.in/sym_details/NSE_CM.csv */
         /*****  here the hashmap contain  13th column as key and 12th column as value*/
         /*****  ``` EXAMPLE : symbolToFyersSymbol[NESTLEIND]=17963 */
