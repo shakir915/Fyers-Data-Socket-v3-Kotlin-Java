@@ -1,7 +1,15 @@
 incomplete; 
+
+
 flull mode subscriptin for stocks done
+
+
 lite mode : pending
+
+
 index and depth : pending
+
+
 
 
 ```
