@@ -1,4 +1,4 @@
-Fyers Data Socket v3 Kotlin / Java JVM
+Fyers Data Socket v3 Kotlin / Java JVM Desktop Android
 
 incomplete; 
 
