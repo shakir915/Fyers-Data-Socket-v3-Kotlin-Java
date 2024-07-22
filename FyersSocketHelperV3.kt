@@ -18,7 +18,6 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import java.util.concurrent.TimeUnit
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.math.pow
@@ -32,6 +31,12 @@ object FyersSocketHelperV3 {
     private var channelNum: Int = 10
 
 
+    fun getSymbolsList(): List<String> {
+
+        return listOf("TCS", "INFY", "WIPRO", "SAIL", "NESTLEIND", "TATAMOTORS", "TATACONSUM", "RELIANCE")
+    }
+
+
     var process_UI_enabled = false
     var process_UI_function: ((String, Double, Long, Long) -> Unit)? = null
 
@@ -39,7 +44,7 @@ object FyersSocketHelperV3 {
     var process_MCCSH_UI_LOGIC = false
     var process_MCCSH_UI_LOGIC_function: (() -> Unit)? = null
 
-    var klines: ArrayList<FyersSocketKlines> = arrayListOf()
+//    var klines: ArrayList<FyersSocketKlines> = arrayListOf()
 
 
     var fyersSocket: DefaultClientWebSocketSession? = null
@@ -56,29 +61,7 @@ object FyersSocketHelperV3 {
     var lastHITTime = 0L
 
 
-    suspend fun subscribe() {
-        try {
-
-            if (System.currentTimeMillis() - lastHITTime <= TimeUnit.SECONDS.toMillis(10)) {
-
-                subscribeReal()
-            } else {
-                startFyersocket()
-            }
-
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
-
-    var listSubscribedList = arrayListOf<String>()
-    suspend fun subscribeReal() {
-        val symbolToFyersSymbol = FyersMaster.symbolToFyersSymbol()
-
-    }
-
     suspend fun close() {
-        println("FyersSocketHelper : close() called")
         try {
             fyersSocket?.close()
         } catch (e: Exception) {
@@ -104,9 +87,6 @@ object FyersSocketHelperV3 {
 
                 suspend fun sendBinary(binaryData: ByteArray?) {
                     if (binaryData != null) {
-//                        val milli = System.currentTimeMillis()
-//                        File(File(getDataFolder("FyersTestV3"), "logs"), milli.div(1000).toString() + "." + milli % 1000 + "send_JAVA.sgdhgs")
-//                            .writeBytes(binaryData)
                         val frame = Frame.Binary(true, binaryData)
                         send(frame)
                     }
@@ -127,22 +107,13 @@ object FyersSocketHelperV3 {
                     delay(1000)
                     sendBinary(createAccessTokenMessage())
                     delay(1000)
-                    sendBinary(createFullModeLiteModeMessage(isLiteMode = true))
+                    sendBinary(createFullModeLiteModeMessage(isLiteMode = false))
                     delay(1000)
-                    /**** Series.getMyListScrips("intra") contain symbol list like arrayOf("TCS","INFY")*/
-                    sendBinary(createSubscriptionMessage(klines.map { it.symbol } + Series.getMyListScrips("intra").distinct().filterNotNull().take(200).apply {
-                        listSubscribedList.clear()
-                        listSubscribedList.addAll(this)
-                    }.map {
-                        //println(it+" symbolToFyersSymbol "+symbolToFyersSymbol.get(it))
+                    sendBinary(createSubscriptionMessage(getSymbolsList().map {
                         "sf|nse_cm|${symbolToFyersSymbol.get(it)}"
-                    }.filterNotNull().take(100000)))
+                    }))
 
-
-                    println("SEND createSubscriptionMessage")
-                    println("SEND DONE")
                 }
-                println("RECIVE REACH")
 
                 val file = getDataFolder("FyersTestV3", "Fyers__${milliFileDateTime(System.currentTimeMillis())}")
 
@@ -170,7 +141,6 @@ object FyersSocketHelperV3 {
 
 
         val responseType = ByteBuffer.wrap(binary.copyOfRange(2, 3)).order(ByteOrder.BIG_ENDIAN).get().toInt()
-        //println("binary ${String(binary)}  ${(binary.size)} responseType $responseType")
         if (responseType == (1)) { //auth
             var offset = 4
             offset += 1
@@ -178,8 +148,7 @@ object FyersSocketHelperV3 {
             offset += 2
             val stringVal = String(binary.slice(offset until offset + fieldLength).toByteArray(), Charsets.UTF_8)
             offset += fieldLength
-            //println("binary ${binary.size} responseType $responseType stringVal $stringVal")
-            // println("binary  ${(binary.size)} responseType $responseType fieldLength ${fieldLength} responseType $responseType stringVal $stringVal")
+
         } else if (responseType == (4)) { // data feed
             var offset = 4
             offset += 1
@@ -187,9 +156,6 @@ object FyersSocketHelperV3 {
             offset += 2
             val stringVal = String(binary.slice(offset until offset + fieldLength).toByteArray(), Charsets.UTF_8)
             offset += fieldLength
-            //println("binary ${binary.size} responseType $responseType stringVal $stringVal")
-            //println("binary  ${(binary.size)} responseType $responseType fieldLength ${fieldLength} responseType $responseType stringVal $stringVal")
-
 
         } else if (responseType == (6)) { // data feed
 
@@ -247,15 +213,14 @@ object FyersSocketHelperV3 {
                         /***NESTLEIND-EQ**/
                         offset += string_len
 
-                        //println("topic_id $topic_id topic_name $topic_name stock_name $stock_name multiplier $multiplier precision $precision market $market stock_id $stock_id")
                         symbols_of_topics[topic_id] = stock_name.split("-")[0]
-                        multiplier_topics[topic_id] = multiplier
-                        precision_topics[topic_id] = precision
+                        multiplier_of_topics[topic_id] = multiplier
+                        precision_of_topics[topic_id] = precision
 
                     }
 
 
-                } else if (data_type == 85) {
+                } else if (data_type == 85) { //full mode sf only (if dp pending)
 
                     offset += 1
                     val topic_id = ByteBuffer.wrap(binary.copyOfRange(offset, offset + 2)).order(ByteOrder.BIG_ENDIAN).getShort().toInt()
@@ -267,6 +232,7 @@ object FyersSocketHelperV3 {
                     var dp_flag = false;
                     var UpdateTick = false
 
+                    //todo(dynamic) : assume field_count  as 21 ; if not ; the code may fail
 
                     var last_traded_price = parsePrice(binary, offset, topic_id)
                     offset += 4
@@ -292,7 +258,7 @@ object FyersSocketHelperV3 {
                     offset += 4
                     var vwap_varage_price = parsePrice(binary, offset, topic_id)
                     offset += 4
-                    var open_interest = parseQty(binary, offset, topic_id) //what is this? is this applicable in stocks?
+                    var open_interest = parseQty(binary, offset, topic_id) //todo :is this applicable in stocks?
                     offset += 4
                     var low_price = parsePrice(binary, offset, topic_id)
                     offset += 4
@@ -312,31 +278,17 @@ object FyersSocketHelperV3 {
                     offset += 4
 
                     println(
-                        "${symbols_of_topics[topic_id]} last_traded_price ${last_traded_price.printFloat()} ${open_price.printFloat()} ${high_price.printFloat()} ${low_price.printFloat()} ${previous_close_price.printFloat()}  $trade_volume ${
-                            milliDisplay(
-                                last_traded_time
-                            )
-                        }"
+                        "${symbols_of_topics[topic_id]} last_traded_price ${last_traded_price.printFloat()} " +
+                                "${open_price.printFloat()} ${high_price.printFloat()} ${low_price.printFloat()} ${previous_close_price.printFloat()}  $trade_volume " +
+                                "${milliDisplay(last_traded_time)}"
                     )
                     //todo create OHLCV class
-                    //why they don't provide OHLC of a smaller time frame, ??????
-
-                    //todo : parse properly using loop; above one may fail if field_count!=21;
-//                    for (i in 0 until field_count){
-//                        val inttt = ByteBuffer.wrap(binary.copyOfRange(offset, offset + 4)).order(ByteOrder.BIG_ENDIAN).getInt()
-//                        val intttUUUU = ByteBuffer.wrap(binary.copyOfRange(offset, offset + 4)).order(ByteOrder.BIG_ENDIAN).getInt().toUInt()
-//                        val ffff = ByteBuffer.wrap(binary.copyOfRange(offset, offset + 4)).order(ByteOrder.BIG_ENDIAN).getFloat()
-//                        offset += 4
-//                        println("${symbols_of_topics.get(topic_id)} $i int $inttt $intttUUUU ffff $ffff")
-//                        if (i==3){
-//                            ltt=inttt.times(1000L)
-//                        } else if (i==4){
-//                            v=inttt.toLong()
-//                        }
-//                    }
+                    //no OHLC   (like 1 minute candle) provided in v3 Socket
+                    //you can create by storing data, but the candle will be not be  accurate as V2
 
 
-                } else if (data_type == 76) {
+
+                } else if (data_type == 76) { // lite mode sf only (if dp pending)
                     offset += 1
                     val topic_id = ByteBuffer.wrap(binary.copyOfRange(offset, offset + 2)).order(ByteOrder.BIG_ENDIAN).getShort().toInt()
                     offset += 2
@@ -354,17 +306,16 @@ object FyersSocketHelperV3 {
     }
 
 
-    val type_L1_7208 = 7208
 
 
     var stopTest = false
     var pauseTest = false
 
 
-    val list = HashMap<String, Int>()
+
     val symbols_of_topics = HashMap<Int, String>()
-    val multiplier_topics = HashMap<Int, Int>()
-    val precision_topics = HashMap<Int, Int>()
+    val multiplier_of_topics = HashMap<Int, Int>()
+    val precision_of_topics = HashMap<Int, Int>()
 
 
     fun createSubscriptionMessage(symbols: List<String>): ByteArray {
@@ -532,8 +483,8 @@ object FyersSocketHelperV3 {
     fun parsePrice(binary: ByteArray, offset: Int, topic_id: Int): Double {
         return ByteBuffer.wrap(binary.copyOfRange(offset, offset + 4)).order(ByteOrder.BIG_ENDIAN).getInt().toUInt().toLong()
             .toDouble()
-            .times(multiplier_topics[topic_id]!!.toDouble())
-            .div(10.0.pow(precision_topics[topic_id]!!))
+            .times(multiplier_of_topics[topic_id]!!.toDouble())
+            .div(10.0.pow(precision_of_topics[topic_id]!!))
     }
 
     fun parseQty(binary: ByteArray, offset: Int, topic_id: Int): Long {
