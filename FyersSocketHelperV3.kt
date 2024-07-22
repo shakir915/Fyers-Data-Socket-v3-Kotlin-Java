@@ -27,11 +27,9 @@ import kotlin.math.pow
 object FyersSocketHelperV3 {
 
 
-
-
     var source = "PythonSDK-3.0.9"
     var mode = "P"
-    private var channelNum: Int = 11
+    private var channelNum: Int = 10
 
 
     var process_UI_enabled = false
@@ -106,9 +104,9 @@ object FyersSocketHelperV3 {
 
                 suspend fun sendBinary(binaryData: ByteArray?) {
                     if (binaryData != null) {
-                        val milli = System.currentTimeMillis()
-                        File(File(getDataFolder("FyersTestV3"), "logs"), milli.div(1000).toString() + "." + milli % 1000 + "send_JAVA.sgdhgs")
-                            .writeBytes(binaryData)
+//                        val milli = System.currentTimeMillis()
+//                        File(File(getDataFolder("FyersTestV3"), "logs"), milli.div(1000).toString() + "." + milli % 1000 + "send_JAVA.sgdhgs")
+//                            .writeBytes(binaryData)
                         val frame = Frame.Binary(true, binaryData)
                         send(frame)
                     }
@@ -129,7 +127,7 @@ object FyersSocketHelperV3 {
                     delay(1000)
                     sendBinary(createAccessTokenMessage())
                     delay(1000)
-                    sendBinary(createFullModeMessage())
+                    sendBinary(createFullModeLiteModeMessage(isLiteMode = true))
                     delay(1000)
                     sendBinary(createSubscriptionMessage(klines.map { it.symbol } + Series.getMyListScrips("intra").distinct().filterNotNull().take(200).apply {
                         listSubscribedList.clear()
@@ -137,7 +135,7 @@ object FyersSocketHelperV3 {
                     }.map {
                         //println(it+" symbolToFyersSymbol "+symbolToFyersSymbol.get(it))
                         "sf|nse_cm|${symbolToFyersSymbol.get(it)}"
-                    }.filterNotNull().take(1)))
+                    }.filterNotNull().take(100000)))
 
 
                     println("SEND createSubscriptionMessage")
@@ -289,7 +287,7 @@ object FyersSocketHelperV3 {
                     offset += 4
                     var total_buy_quantity = parseQty(binary, offset, topic_id)
                     offset += 4
-                    var total_sell_quantity =parseQty(binary, offset, topic_id)
+                    var total_sell_quantity = parseQty(binary, offset, topic_id)
                     offset += 4
                     var vwap_varage_price = parsePrice(binary, offset, topic_id)
                     offset += 4
@@ -312,7 +310,13 @@ object FyersSocketHelperV3 {
                     var previous_close_price = parsePrice(binary, offset, topic_id)
                     offset += 4
 
-                    println("last_traded_price ${last_traded_price.printFloat()} ${open_price.printFloat()} ${high_price.printFloat()} ${low_price.printFloat()} ${previous_close_price.printFloat()}  $trade_volume ${milliDisplay(last_traded_time)}")
+                    println(
+                        "${symbols_of_topics[topic_id]} last_traded_price ${last_traded_price.printFloat()} ${open_price.printFloat()} ${high_price.printFloat()} ${low_price.printFloat()} ${previous_close_price.printFloat()}  $trade_volume ${
+                            milliDisplay(
+                                last_traded_time
+                            )
+                        }"
+                    )
                     //todo create OHLCV class
                     //why they don't provide OHLC of a smaller time frame, ??????
 
@@ -332,7 +336,16 @@ object FyersSocketHelperV3 {
 
 
                 } else if (data_type == 76) {
-                    //todo lite mode
+                    offset += 1
+                    val topic_id = ByteBuffer.wrap(binary.copyOfRange(offset, offset + 2)).order(ByteOrder.BIG_ENDIAN).getShort().toInt()
+                    offset += 2
+                    var last_traded_price = parsePrice(binary, offset, topic_id)
+                    offset += 4
+                    println(
+                        "${symbols_of_topics[topic_id]} last_traded_price ${last_traded_price.printFloat()} "
+                    )
+
+
                 }
             }
         }
@@ -387,8 +400,6 @@ object FyersSocketHelperV3 {
     }
 
 
-
-
     @OptIn(ExperimentalEncodingApi::class)
     fun convertAccessTokenToHsmToken(): String? {
         try {
@@ -409,11 +420,13 @@ object FyersSocketHelperV3 {
     }
 
 
-
-
     private fun createAccessTokenMessage(): ByteArray {
-       val stream = ByteArrayOutputStream()
-        val hsmToken = convertAccessTokenToHsmToken()!!
+        val stream = ByteArrayOutputStream()
+        val hsmToken = convertAccessTokenToHsmToken()
+        if (hsmToken == null) {
+
+            throw RuntimeException("Failed to convert access token to HSM token")
+        }
         val bufferSize = 18 + hsmToken.length + source.length
         stream.write(ByteBuffer.allocate(2).order(ByteOrder.BIG_ENDIAN).putShort((bufferSize - 2).toShort()).array())
 
@@ -451,9 +464,7 @@ object FyersSocketHelperV3 {
     }
 
 
-    private fun createFullModeMessage(): ByteArray {
-
-
+    private fun createFullModeLiteModeMessage(isLiteMode: Boolean = false): ByteArray {
         val channels = listOf(channelNum)
         val stream = ByteArrayOutputStream()
         stream.writeShort((0).toShort())
@@ -461,17 +472,19 @@ object FyersSocketHelperV3 {
         stream.writeByte((2).toByte())
         var channelBits = 0L
         for (channelNum in channels) {
-            if (channelNum in 1..63) {
+            if (channelNum in 0..63) {
                 channelBits = channelBits or (1L shl channelNum)
             }
         }
-
         stream.writeByte((1).toByte())
         stream.writeShort((8).toShort())
         stream.writeByte((channelBits).toByte())
         stream.writeByte((2).toByte())
         stream.writeShort((1).toShort())
-        stream.writeByte((70).toByte())
+        if (isLiteMode)
+            stream.writeByte((76).toByte())
+        else
+            stream.writeByte((70).toByte())
         return stream.toByteArray()
     }
 
@@ -485,7 +498,7 @@ object FyersSocketHelperV3 {
         stream.writeByte(1)
         var channelBits = 0L
         for (channelNum in channels) {
-            if (channelNum in 1..63) {
+            if (channelNum in 0..63) {
                 channelBits = channelBits or (1L shl channelNum)
             }
         }
@@ -504,7 +517,7 @@ object FyersSocketHelperV3 {
         stream.writeByte(1)
         var channelBits = 0L
         for (channelNum in channels) {
-            if (channelNum in 1..63) {
+            if (channelNum in 0..63) {
                 channelBits = channelBits or (1L shl channelNum)
             }
         }
@@ -550,7 +563,6 @@ object FyersSocketHelperV3 {
             }
         }
     }
-
 
 
 }
