@@ -792,3 +792,97 @@ This Is the order of 21  feilds in full mode sf
 ```
 
 
+
+
+```
+plugins {
+    id 'java'
+    id 'org.jetbrains.kotlin.jvm'
+}
+
+group 'shakir.bhav.common'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+    google()
+}
+
+compileKotlin {
+    kotlinOptions.jvmTarget = "17"
+}
+
+
+
+
+dependencies {
+
+
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:1.8.22"
+    /* implementation project(path: ':app')*/
+    testImplementation group: 'junit', name: 'junit', version: '4.13.2'
+
+    api 'org.json:json:20211205'
+
+   // api group: 'org.jetbrains.kotlinx', name: 'kotlinx-coroutines-javafx', version: '1.4.2'
+
+
+    // api 'com.google.firebase:firebase-admin:7.1.0'
+    //implementation 'com.google.api-client:google-api-client:1.31.2'
+    implementation "org.jetbrains.kotlin:kotlin-reflect:1.8.22"
+    implementation 'com.google.protobuf:protobuf-java:4.0.0-rc-2'
+
+    api 'com.google.code.gson:gson:2.10'
+
+
+    api("io.ktor:ktor-server-core:2.0.0")
+    api("io.ktor:ktor-server-netty:2.0.0")
+    api("ch.qos.logback:logback-classic:1.2.10")
+    api("io.ktor:ktor-client-core:2.0.3")
+    api("io.ktor:ktor-client-cio:2.0.3")
+    api("io.ktor:ktor-client-logging:2.0.0")
+    api("io.ktor:ktor-client-gson:2.0.0")
+    api("io.ktor:ktor-client-websockets:2.0.0")
+    api("io.ktor:ktor-client-serialization:2.0.0")
+    api("io.ktor:ktor-serialization-kotlinx-json:2.0.0")
+    api("io.ktor:ktor-client-content-negotiation:2.0.0")
+    api("io.ktor:ktor-serialization-gson:2.0.0")
+    api("io.ktor:ktor-client-okhttp:2.0.0")
+    api("io.ktor:ktor-client-apache:2.0.0")
+    //api("io.ktor:ktor-client-android:2.0.0")
+
+    api group: 'commons-codec', name: 'commons-codec', version: '1.15'
+    api("com.google.guava:guava:31.0.1-android")
+//    api 'io.ktor:ktor-client-android:1.6.4'
+
+
+
+    // https://mvnrepository.com/artifact/com.squareup.okhttp/logging-interceptor
+
+
+
+
+
+    // define a BOM and its version
+    api(platform("com.squareup.okhttp3:okhttp-bom:4.10.0"))
+    // define any required OkHttp artifacts without version
+    api("com.squareup.okhttp3:okhttp")
+    api("com.squareup.okhttp3:logging-interceptor")
+
+    api ("org.apache.commons:commons-compress:1.22")
+
+
+    api 'com.fasterxml.jackson.core:jackson-databind:2.13.4'
+
+//    api 'javax.naming:javax.naming-api:1.0'
+//    api 'javax.security:javax.security.auth.message:1.0'
+//    api 'org.ietf.jgss:gssapi:1.0'
+
+
+}
+
+
+
+```
+
+
