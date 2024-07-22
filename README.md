@@ -796,7 +796,7 @@ This Is the order of 21  feilds in full mode sf
 
 
 
-```build.gradle```
+```build.gradle : only few dependencies from below list required ```
 ```
 plugins {
     id 'java'
