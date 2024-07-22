@@ -1,4 +1,4 @@
-note : copy paste the code
+
 
 Fyers Data Socket v3 Kotlin / Java JVM Desktop Android
 
