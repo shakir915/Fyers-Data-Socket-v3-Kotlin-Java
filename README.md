@@ -6,7 +6,7 @@ incomplete;
 flull mode subscriptin for stocks done
 
 
-lite mode : pending
+lite mode for stock done
 
 
 index and depth : pending
