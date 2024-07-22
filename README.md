@@ -2,6 +2,8 @@
 
 Fyers Data Socket v3 Kotlin / Java JVM Desktop Android
 
+reference: https://pypi.org/project/fyers-apiv3/
+
 incomplete; 
 
 
