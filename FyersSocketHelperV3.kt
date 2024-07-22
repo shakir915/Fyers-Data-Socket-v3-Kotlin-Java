@@ -129,6 +129,7 @@ object FyersSocketHelperV3 {
                     delay(1000)
                     sendBinary(createFullModeLiteModeMessage(isLiteMode = true))
                     delay(1000)
+                    /**** Series.getMyListScrips("intra") contain symbol list like arrayOf("TCS","INFY")*/
                     sendBinary(createSubscriptionMessage(klines.map { it.symbol } + Series.getMyListScrips("intra").distinct().filterNotNull().take(200).apply {
                         listSubscribedList.clear()
                         listSubscribedList.addAll(this)
